@@ -44,14 +44,14 @@ class Attendee
         $this->isIrlAttendee = $isIrlAttendee;
         $this->regionalCode = $regionalCode;
 
-        if ($virtualTourSatisfaction) {
+        if ($virtualTourSatisfaction !== null) {
             // If the virtualTourSatisfaction value is set then set it to an integer otherwise set it to null
             $this->virtualTourSatisfaction = $virtualTourSatisfaction;
         } else {
             $this->virtualTourSatisfaction = null;
         }
 
-        if ($websiteSatisfaction) {
+        if ($websiteSatisfaction !== null) {
             // If the websiteSatisfaction value is set then set it to an integer otherwise set it to null
             $this->websiteSatisfaction = $websiteSatisfaction;
         } else {

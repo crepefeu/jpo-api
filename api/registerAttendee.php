@@ -13,23 +13,22 @@ $lastName = $_POST['lastName']; // Get the last name from the POST request
 $email = $_POST['email']; // Get the email from the POST request
 $diplomaId = intval($_POST['diplomaId']); // Get the diploma id from the POST request
 $diplomaCategoryId = intval($_POST['diplomaCategoryId']); // Get the diploma category id from the POST request
-$isIrlAttendee = intval($_POST['isIrlAttendee']); // Get the isIrlAttendee value from the POST request
+$isIrlAttendee = $_POST['isIrlAttendee'] == "true" ? 1 : 0; // Get the isIrlAttendee value from the POST request and set it to 1 if it is true otherwise set it to 0
 $regionalCode = $_POST['regionalCode']; // Get the regional code from the POST request
+$virtualTourSatisfaction = $_POST['virtualTourSatisfaction']; // Get the virtual tour satisfaction from the POST request
+$websiteSatisfaction = $_POST['websiteSatisfaction']; // Get the website satisfaction from the POST request
 
-if ($virtualTourSatisfaction) { // If the virtualTourSatisfaction value is set then set it to an integer otherwise set it to null
+if ($virtualTourSatisfaction !== null) { // If the virtualTourSatisfaction value is set then set it to an integer otherwise set it to null
     $virtualTourSatisfaction = intval($_POST['virtualTourSatisfaction']);
 } else {
     $virtualTourSatisfaction = null;
 }
 
-if ($websiteSatisfaction) { // If the websiteSatisfaction value is set then set it to an integer otherwise set it to null
+if ($websiteSatisfaction !== null) { // If the websiteSatisfaction value is set then set it to an integer otherwise set it to null
     $websiteSatisfaction = intval($_POST['websiteSatisfaction']);
 } else {
     $websiteSatisfaction = null;
 }
-
-echo $virtualTourSatisfaction;
-echo $websiteSatisfaction;
 
 $attendee = new Attendee($db); // Create a new attendee object
 
