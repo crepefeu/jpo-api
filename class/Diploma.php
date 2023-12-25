@@ -54,13 +54,13 @@ class Diploma
         return $response;
     }
 
-    public function delete() {
-        $query = "DELETE FROM " . $this->db_table . " WHERE id = :id"; // Query to delete diploma
+    public function delete($id) {
+        $query = "DELETE FROM " . $this->db_table . " WHERE diplomaId = :id"; // Query to delete diploma
 
         $stmt = $this->conn->prepare($query);
 
         // Bind parameters
-        $stmt->bindParam(":id", $this->diplomaId);
+        $stmt->bindParam(":id", $id);
 
         $stmt->execute(); // Execute query
 
