@@ -13,7 +13,7 @@ $id = intval($_POST['diplomaId']); // Get the id from the POST request
 
 $diploma = new Diploma($db); // Create a new attendee object
 
-$response = $diploma->delete($id); // Delete the attendee from the database
+$response = $diploma->deleteDiploma($id); // Delete the attendee from the database
 
 echo json_encode($response); // Send the response as JSON
 

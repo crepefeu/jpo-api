@@ -13,7 +13,7 @@ $id = intval($_POST['attendeeId']); // Get the id from the POST request
 
 $attendee = new Attendee($db); // Create a new attendee object
 
-$response = $attendee->delete($id); // Delete the attendee from the database
+$response = $attendee->deleteAttendee($id); // Delete the attendee from the database
 
 echo json_encode($response); // Send the response as JSON
 

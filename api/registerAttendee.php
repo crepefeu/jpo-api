@@ -35,7 +35,7 @@ $attendee = new Attendee($db); // Create a new attendee object
 // Set all attendee values
 $attendee->setAllValues($firstName, $lastName, $email, $diplomaId, $diplomaCategoryId, $isIrlAttendee, $regionalCode, $virtualTourSatisfaction, $websiteSatisfaction);
 
-$response = $attendee->create(); // Create the attendee in the database
+$response = $attendee->createAttendee(); // Create the attendee in the database
 
 echo json_encode($response); // Send the response as JSON
 ?>

@@ -23,7 +23,7 @@ $attendee = new Attendee($db); // Create a new attendee object
 // Set all attendee values
 $attendee->setAllValues($firstName, $lastName, $email, $diplomaId, $diplomaCategoryId, $isIrlAttendee, $regionalCode, null, null);
 
-$response = $attendee->update($id); // Delete the attendee from the database
+$response = $attendee->updateAttendee($id); // Delete the attendee from the database
 
 echo json_encode($response); // Send the response as JSON
 

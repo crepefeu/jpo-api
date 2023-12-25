@@ -54,7 +54,7 @@ class Diploma
         return $response;
     }
 
-    public function delete($id) {
+    public function deleteDiploma($id) {
         $query = "DELETE FROM " . $this->db_table . " WHERE diplomaId = :id"; // Query to delete diploma
 
         $stmt = $this->conn->prepare($query);

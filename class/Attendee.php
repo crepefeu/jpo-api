@@ -60,7 +60,7 @@ class Attendee
     }
 
     // Create attendee with
-    public function create()
+    public function createAttendee()
     {
         // Check if attendee already exists in the database by checking if an attendee with the same email exists
         $query = "SELECT * FROM " . $this->db_table . " WHERE email = :email";
@@ -112,7 +112,7 @@ class Attendee
     }
 
     // Update attendee
-    public function update($id)
+    public function updateAttendee($id)
     {
         // Get original data
         $query = "SELECT * FROM " . $this->db_table . " WHERE id = :id";
@@ -212,7 +212,7 @@ class Attendee
     }
 
     // Delete attendee
-    public function delete($id)
+    public function deleteAttendee($id)
     {
         // Query to delete attendee
         $query = "DELETE FROM " . $this->db_table . " WHERE id = :id";
