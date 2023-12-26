@@ -12,18 +12,9 @@ $db_table = "attendees"; // Set the database table name
 $attendees = array(); // Create an array to store attendees data
 
 $query = "SELECT * FROM " . $db_table; // Query to get all attendees
-$irlAttendeesQuery = "SELECT * FROM " . $db_table . " WHERE isIrlAttendee = 1"; // Query to get all IRL attendees
-
-$irlAttendeesStmt = $db->prepare($irlAttendeesQuery);
-$irlAttendeesStmt->execute();
-$irlAttendeesCount = $irlAttendeesStmt->rowCount(); // Get the number of IRL attendees
-
-$attendees["irlAttendeesCount"] = $irlAttendeesCount; // Append IRL attendees count to attendees array
 
 $stmt = $db->prepare($query);
 $stmt->execute();
-$attendeesCount = $stmt->rowCount(); // Get the number of attendees
-$attendees["totalAttendeesCount"] = $attendeesCount; // Append attendees count to attendees array
 
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
     extract($row); // Extract row data
@@ -42,7 +33,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
         "websiteSatisfaction" => $websiteSatisfaction
     );
 
-    $attendees["dataList"][] = $attendee; // Append attendee data to attendees array
+    $attendees[] = $attendee; // Append attendee data to attendees array
 }
 
 echo json_encode($attendees); // Send attendees array as JSON response
