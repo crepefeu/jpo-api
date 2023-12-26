@@ -22,7 +22,7 @@ class DiplomaCategory
         $this->categoryName = $categoryName;
     }
 
-    // Add diploma
+    // Add diploma category
     public function addDiplomaCategory()
     {
         $query = "INSERT INTO " . $this->db_table . " (categoryName) VALUES (:categoryName)"; // Query to add diploma
@@ -44,6 +44,33 @@ class DiplomaCategory
             $response = array(
                 "status" => "error",
                 "message" => "Erreur lors de l'ajout de la catégorie"
+            );
+        }
+
+        return $response;
+    }
+
+    // Delete diploma category
+    public function deleteDiplomaCategory($id) {
+        $query = "DELETE FROM " . $this->db_table . " WHERE id = :id"; // Query to delete diploma
+
+        $stmt = $this->conn->prepare($query);
+
+        // Bind parameters
+        $stmt->bindParam(":id", $id);
+
+        $stmt->execute(); // Execute query
+
+        // check if diploma was deleted
+        if ($stmt->rowCount() > 0) {
+            $response = array(
+                "status" => "success",
+                "message" => "Catégorie supprimée avec succès"
+            );
+        } else {
+            $response = array(
+                "status" => "error",
+                "message" => "Erreur lors de la suppression de la catégorie"
             );
         }
 

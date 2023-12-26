@@ -9,10 +9,12 @@ include_once '../class/DiplomaCategory.php';
 $database = new Database(); // Create a new database object
 $db = $database->getConnection(); // Get database connection
 
+$id = intval($_POST['diplomaCategoryId']); // Get the id from the POST request
+
 $diplomaCategory = new DiplomaCategory($db); // Create a new diploma category object
 
-$diplomaCategory->setAll($_POST['diplomaCategoryName']); // Set all values
-
-$response = $diplomaCategory->addDiplomaCategory(); // Add the diploma category to the database
+$response = $diplomaCategory->deleteDiplomaCategory($id); // Delete the diploma category from the database
 
 echo json_encode($response); // Send the response as JSON
+
+?>
