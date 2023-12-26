@@ -54,7 +54,39 @@ class Diploma
         return $response;
     }
 
-    public function deleteDiploma($id) {
+    public function modifyDiploma($id)
+    {
+        $query = "UPDATE " . $this->db_table . " 
+            SET categoryId = :categoryId, diplomaName = :diplomaName 
+            WHERE diplomaId = :id";
+
+        $stmt = $this->conn->prepare($query);
+
+        // Bind parameters
+        $stmt->bindParam(":id", $id);
+        $stmt->bindParam(':categoryId', $this->categoryId);
+        $stmt->bindParam(':diplomaName', $this->diplomaName);
+
+        $stmt->execute(); // Execute query
+
+        // check if diploma was modified
+        if ($stmt->rowCount() > 0) {
+            $response = array(
+                "status" => "success",
+                "message" => "Diplôme modifié avec succès"
+            );
+        } else {
+            $response = array(
+                "status" => "error",
+                "message" => "Erreur lors de la modification"
+            );
+        }
+
+        return $response;
+    }
+
+    public function deleteDiploma($id)
+    {
         $query = "DELETE FROM " . $this->db_table . " WHERE diplomaId = :id"; // Query to delete diploma
 
         $stmt = $this->conn->prepare($query);
