@@ -87,6 +87,25 @@ class Diploma
 
     public function deleteDiploma($id)
     {
+        $query = "SELECT * FROM attendees WHERE diplomaId = :id"; // Query to check if diploma is used in the attendees table
+
+        $stmt = $this->conn->prepare($query);
+
+        // Bind parameters
+        $stmt->bindParam(":id", $id);
+
+        $stmt->execute(); // Execute query
+
+        // check if diploma is used in the attendees table
+        if ($stmt->rowCount() > 0) {
+            $response = array(
+                "status" => "error",
+                "message" => "Ce diplôme est utilisé par un/des participant(s)"
+            );
+
+            return $response;
+        }
+
         $query = "DELETE FROM " . $this->db_table . " WHERE diplomaId = :id"; // Query to delete diploma
 
         $stmt = $this->conn->prepare($query);
