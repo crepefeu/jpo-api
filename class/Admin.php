@@ -60,17 +60,22 @@ class Admin
                 $userPreferencesStmt->bindParam(":adminId", $row["id"]);
                 $userPreferencesStmt->execute();
                 $row["userPreferences"] = $userPreferencesStmt->fetch(PDO::FETCH_ASSOC); // Get the user preferences
-                
+
                 // Go through each user preference except the first one and set the value to true if it is 1 and false if it is 0
                 foreach ($row["userPreferences"] as $key => $value) {
-                    if ($key != "id" && $key != "adminId") { // Check if the key is not id or adminId
-                        if ($value == 1) {
-                            $row["userPreferences"][$key] = true; // Set the value to true
+                    if ($key != "adminId") { // Check if the key is not id or adminId
+                        if ($key == 'defaultTheme') { // Check if the key is defaultTheme
+                            $row["userPreferences"][$key] = $value; // Set the value to the value in the database
                         } else {
-                            $row["userPreferences"][$key] = false; // Set the value to false
+                            if ($value == 1) {
+                                $row["userPreferences"][$key] = true; // Set the value to true
+                            } else {
+                                $row["userPreferences"][$key] = false; // Set the value to false
+                            }
                         }
                     }
                 }
+
                 // Store user details in response
                 $response = array(
                     'status' => 'success',

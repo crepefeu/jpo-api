@@ -13,7 +13,7 @@ $isAuth = false; // Set the authentication status to false by default
 
 $showPercentagesOnCharts = $_POST['showPercentagesOnCharts'] == "true" ? 1 : 0; // Get the showPercentagesOnCharts value from the POST request
 $showLegendOnCharts = $_POST['showLegendOnCharts'] == "true" ? 1 : 0; // Get the showLegendOnCharts value from the POST request
-$useDarkModeByDefault = $_POST['useDarkModeByDefault'] == "true" ? 1 :0; // Get the useDarkModeByDefault value from the POST request
+$defaultTheme = $_POST['defaultTheme']; // Get the defaultTheme value from the POST request
 
 // Get the token from the request headers
 foreach (getallheaders() as $name => $value) { // Go through each header
@@ -38,7 +38,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
 
 // Query to update user preferences
 $query = "UPDATE userPreferences SET 
-        useDarkModeByDefault = :useDarkModeByDefault,
+        defaultTheme = :defaultTheme,
         showPercentagesOnCharts = :showPercentagesOnCharts,
         showLegendOnCharts = :showLegendOnCharts
         WHERE adminId = :adminId";
@@ -48,7 +48,7 @@ $stmt = $db->prepare($query);
 // Bind the values to the query
 $stmt->bindParam(':showPercentagesOnCharts', $showPercentagesOnCharts);
 $stmt->bindParam(':showLegendOnCharts', $showLegendOnCharts);
-$stmt->bindParam('useDarkModeByDefault', $useDarkModeByDefault);
+$stmt->bindParam(':defaultTheme', $defaultTheme);
 $stmt->bindParam(':adminId', $userId);
 $stmt->execute(); // Execute the query
 
@@ -61,11 +61,15 @@ $row["userPreferences"] = $stmt->fetch(PDO::FETCH_ASSOC); // Get the user prefer
 
 // Go through each user preference except the first one and set the value to true if it is 1 and false if it is 0
 foreach ($row["userPreferences"] as $key => $value) {
-    if ($key != "id" && $key != "adminId") {
-        if ($value == 1) {
-            $row["userPreferences"][$key] = true;
+    if ($key != "adminId") { // Check if the key is not id or adminId
+        if ($key == 'defaultTheme') { // Check if the key is defaultTheme
+            $row["userPreferences"][$key] = $value; // Set the value to the value in the database
         } else {
-            $row["userPreferences"][$key] = false;
+            if ($value == 1) {
+                $row["userPreferences"][$key] = true; // Set the value to true
+            } else {
+                $row["userPreferences"][$key] = false; // Set the value to false
+            }
         }
     }
 }
