@@ -31,6 +31,4 @@ if ($stmt->rowCount() > 0) { // Check if the token exists in the database
 } else {
     $isAuth = false; // Set the authentication status to false
 }
-
-echo json_encode($isAuth); // Send the authentication status as JSON response
 ?>
