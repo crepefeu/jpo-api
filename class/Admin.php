@@ -79,7 +79,7 @@ class Admin
                 // Store user details in response
                 $response = array(
                     'status' => 'success',
-                    'statusMessage' => 'Connexion réussie.',
+                    'message' => 'Connexion réussie',
                     'displayName' => $row["displayName"],
                     'token' => $token,
                     'userPreferences' => $row["userPreferences"]
@@ -90,7 +90,7 @@ class Admin
                 // Password is incorrect
                 $response = array(
                     'status' => 'error',
-                    'statusMessage' => 'Votre email ou votre mot de passe n\'est pas correct. Veuillez réessayer.'
+                    'message' => 'Identifiants incorrects'
                 );
                 return $response; // Return response
             }
@@ -98,7 +98,7 @@ class Admin
             // Admin does not exist
             $response = array(
                 'status' => 'error',
-                'statusMessage' => 'Votre email ou votre mot de passe n\'est pas correct. Veuillez réessayer.'
+                'message' => 'Identifiants incorrects'
             );
             return $response; // Return response
         }
@@ -123,7 +123,7 @@ class Admin
         // send response
         $response = array(
             'status' => 'success',
-            'statusMessage' => 'Déconnexion réussie.'
+            'message' => 'Déconnexion réussie'
         );
 
         return $response;
