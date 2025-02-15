@@ -55,41 +55,41 @@ ALTER TABLE attendees DROP FOREIGN KEY FK_DIPLOMA_ID;
 ALTER TABLE attendees DROP FOREIGN KEY FK_DIPLOMA_CATEGORY_ID;
 ALTER TABLE diplomaTypes DROP FOREIGN KEY FK_DIPLOMA_CATEGORY;
 
--- 6. Rename UUID columns to be the new primary keys
+-- 6. Rename UUID columns to be the new primary keys and add DEFAULT UUID()
 ALTER TABLE admins 
     DROP PRIMARY KEY,
     DROP COLUMN id,
-    CHANGE new_id id VARCHAR(36) NOT NULL,
+    CHANGE new_id id VARCHAR(36) NOT NULL DEFAULT (UUID()),
     ADD PRIMARY KEY (id);
 
 ALTER TABLE sessions 
     DROP PRIMARY KEY,
     DROP COLUMN id,
-    CHANGE new_id id VARCHAR(36) NOT NULL,
+    CHANGE new_id id VARCHAR(36) NOT NULL DEFAULT (UUID()),
     ADD PRIMARY KEY (id);
 
 ALTER TABLE analyticsSnapshots 
     DROP PRIMARY KEY,
     DROP COLUMN id,
-    CHANGE new_id id VARCHAR(36) NOT NULL,
+    CHANGE new_id id VARCHAR(36) NOT NULL DEFAULT (UUID()),
     ADD PRIMARY KEY (id);
 
 ALTER TABLE diplomaCategories 
     DROP PRIMARY KEY,
     DROP COLUMN id,
-    CHANGE new_id id VARCHAR(36) NOT NULL,
+    CHANGE new_id id VARCHAR(36) NOT NULL DEFAULT (UUID()),
     ADD PRIMARY KEY (id);
 
 ALTER TABLE diplomaTypes 
     DROP PRIMARY KEY,
     DROP COLUMN diplomaId,
-    CHANGE new_id id VARCHAR(36) NOT NULL,
+    CHANGE new_id id VARCHAR(36) NOT NULL DEFAULT (UUID()),
     ADD PRIMARY KEY (id);
 
 ALTER TABLE attendees 
     DROP PRIMARY KEY,
     DROP COLUMN id,
-    CHANGE new_id id VARCHAR(36) NOT NULL,
+    CHANGE new_id id VARCHAR(36) NOT NULL DEFAULT (UUID()),
     ADD PRIMARY KEY (id);
 
 -- 7. Update foreign key columns to use new UUIDs
