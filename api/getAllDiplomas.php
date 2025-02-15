@@ -13,7 +13,7 @@ $db_table = "diplomaTypes"; // Set the database table name
 // Query to get all diploma types and inner join with diplomaCategories and order by diplomaId
 $query = "SELECT * FROM " . $db_table . " 
 INNER JOIN diplomaCategories ON diplomaTypes.categoryId = diplomaCategories.id 
-ORDER BY diplomaTypes.diplomaId ASC";
+ORDER BY diplomaTypes.id ASC";
 
 $stmt = $db->prepare($query);
 $stmt->execute();
