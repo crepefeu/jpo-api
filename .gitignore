@@ -1,2 +1,4 @@
-vendor
+.env
+vendor/
+.DS_Store
 documents
