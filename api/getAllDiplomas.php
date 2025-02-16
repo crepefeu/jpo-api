@@ -22,7 +22,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
 
     // Store diploma data in an array
     $diplomaType = array(
-        "id" => $diplomaId,
+        "id" => $id,
         "name" => $diplomaName,
         "category" => $category[] = array( // Store diploma category data in an array
             "id" => $categoryId,
