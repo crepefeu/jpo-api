@@ -14,17 +14,10 @@ header("Access-Control-Max-Age: 3600");
 header("Content-Type: application/json; charset=UTF-8");
 
 include_once '../config/Database.php';
-include_once 'checkAuthentication.php'; // Check if the user is authenticated
 include_once '../vendor/autoload.php';
+include_once '../middleware/JWTMiddleware.php';
 
-if (!$isAuth) { // Check if the user is authenticated
-    $response = array(
-        "status" => "error",
-        "message" => "Vous n'êtes pas authentifié"
-    ); // Create an error response
-    echo json_encode($response); // Send the response as JSON
-    die(); // Stop executing the script
-}
+JWTMiddleware::validateToken();
 
 $database = new Database(); // Create a new database object
 $db = $database->getConnection(); // Get database connection

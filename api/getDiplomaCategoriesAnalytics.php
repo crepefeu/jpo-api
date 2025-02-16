@@ -14,16 +14,9 @@ header("Access-Control-Max-Age: 3600");
 header("Content-Type: application/json; charset=UTF-8");
 
 include_once '../config/Database.php';
-include_once 'checkAuthentication.php'; // Check if the user is authenticated
+include_once '../middleware/JWTMiddleware.php';
 
-if (!$isAuth) { // Check if the user is authenticated
-    $response = array(
-        "status" => "error",
-        "message" => "Vous n'êtes pas authentifié"
-    ); // Create an error response
-    echo json_encode($response); // Send the response as JSON
-    die(); // Stop executing the script
-}
+JWTMiddleware::validateToken();
 
 $database = new Database(); // Create a new database object
 $db = $database->getConnection(); // Get database connection
@@ -35,20 +28,23 @@ $diplomaCategories = array(
     "counts" => [],
 );
 
-// Query to get all diploma types and inner join with diplomaCategories and order by diplomaId
-$query = "SELECT * FROM " . $db_table . " ORDER BY id ASC";
+// // Query to get all diploma types and inner join with diplomaCategories and order by diplomaId
+$query = "SELECT * FROM " . $db_table . " ORDER BY categoryName ASC";
 $stmt = $db->prepare($query);
 $stmt->execute();
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
-    extract($row); // Extract row data
-
+    // Get the id and name of the diploma category
+    $id = $row['id'];
+    $categoryName = $row['categoryName'];
     // Query to get the diploma category count accross all attendees
-    $query2 = "SELECT COUNT(*) AS diplomaCategoryCount FROM attendees WHERE diplomaCategoryId = " . $id;
+    $query2 = "SELECT COUNT(*) AS diplomaCategoryCount FROM attendees WHERE diplomaCategoryId = :categoryId";
     $stmt2 = $db->prepare($query2);
+    $stmt2->bindParam(':categoryId', $id, PDO::PARAM_STR);
     $stmt2->execute();
     $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
-    extract($row2);
-    
+
+    $diplomaCategoryCount = $row2['diplomaCategoryCount']; // Get the diploma category count
+
     // Append data to diplomas array
     if ($diplomaCategoryCount == 0) {
         continue; // Skip diplomas with 0 attendees
@@ -57,5 +53,5 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
         array_push($diplomaCategories["counts"], $diplomaCategoryCount); // Append diploma count to diplomas array
     }
 }
+
 echo json_encode($diplomaCategories); // Send diplomas array as JSON response
-?>

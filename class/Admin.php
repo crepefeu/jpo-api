@@ -84,6 +84,7 @@ class Admin
                     'message' => 'Connexion réussie',
                     'displayName' => $row["displayName"],
                     'token' => $token,
+                    'id' => $row["id"],
                     'userPreferences' => $row["userPreferences"]
                 );
 

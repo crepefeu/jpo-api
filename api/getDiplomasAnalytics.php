@@ -14,21 +14,14 @@ header("Access-Control-Max-Age: 3600");
 header("Content-Type: application/json; charset=UTF-8");
 
 include_once '../config/Database.php';
-include_once 'checkAuthentication.php'; // Check if the user is authenticated
+include_once '../middleware/JWTMiddleware.php';
 
-if (!$isAuth) { // Check if the user is authenticated
-    $response = array(
-        "status" => "error",
-        "message" => "Vous n'êtes pas authentifié"
-    ); // Create an error response
-    echo json_encode($response); // Send the response as JSON
-    die(); // Stop executing the script
-}
+JWTMiddleware::validateToken();
 
-$database = new Database(); // Create a new database object
-$db = $database->getConnection(); // Get database connection
+$database = new Database();
+$db = $database->getConnection();
 
-$db_table = "diplomaTypes"; // Set the database table name
+$db_table = "diplomaTypes";
 
 // Initialize diplomas array to store diploma data
 $diplomas = array(
@@ -36,28 +29,35 @@ $diplomas = array(
     "counts" => [],
 );
 
-// Query to get all diploma types and inner join with diplomaCategories and order by diplomaId
-$query = "SELECT * FROM " . $db_table . " 
-INNER JOIN diplomaCategories ON diplomaTypes.categoryId = diplomaCategories.id ORDER BY diplomaTypes.diplomaId ASC";
+// Query to get all diploma types and inner join with diplomaCategories and order
+$query = "SELECT 
+    diplomaTypes.id as diplomaId, 
+    diplomaTypes.diplomaName, 
+    diplomaCategories.id as categoryId,
+    diplomaCategories.categoryName 
+FROM " . $db_table . " 
+INNER JOIN diplomaCategories ON diplomaTypes.categoryId = diplomaCategories.id 
+ORDER BY diplomaTypes.diplomaName ASC";
 
 $stmt = $db->prepare($query);
 $stmt->execute();
-while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
-    extract($row); // Extract row data
 
-    // Query to get the diploma count accross all attendees
-    $query2 = "SELECT COUNT(*) AS diplomaCount FROM attendees WHERE diplomaId = " . $diplomaId;
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $diplomaId = preg_replace('/\s+/', '', $row['diplomaId']);
+    $diplomaName = $row['diplomaName'];
+
+    // Query to get the diploma count across all attendees
+    $query2 = "SELECT COUNT(*) AS diplomaCount FROM attendees WHERE diplomaId = :id";
     $stmt2 = $db->prepare($query2);
+    $stmt2->bindParam(':id', $diplomaId, PDO::PARAM_STR);
     $stmt2->execute();
-    $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
-    extract($row2);
     
-    // Append data to diplomas array
-    if ($diplomaCount == 0) {
-        continue; // Skip diplomas with 0 attendees
-    } else {
-        array_push($diplomas["names"], $diplomaName); // Append diploma name to diplomas array
-        array_push($diplomas["counts"], $diplomaCount); // Append diploma count to diplomas array
+    $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+    $diplomaCount = (int)$row2['diplomaCount'];
+    
+    if ($diplomaCount > 0) {
+        array_push($diplomas["names"], $diplomaName);
+        array_push($diplomas["counts"], $diplomaCount);
     }
 }
 echo json_encode($diplomas); // Send diplomas array as JSON response

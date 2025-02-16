@@ -15,6 +15,7 @@ header("Content-Type: application/json; charset=UTF-8");
 
 include_once '../config/Database.php';
 include_once '../class/Admin.php';
+include_once '../class/JWTHandler.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -23,6 +24,12 @@ $password = $_POST['password'];
 
 $admin = new Admin($db, $login, $password);
 $response = $admin->login();
+
+if ($response['status'] === 'success') {
+    $jwt = new JWTHandler();
+    $token = $jwt->generateToken($response['id']);
+    $response['token'] = $token;
+}
 
 echo json_encode($response);
 ?>
