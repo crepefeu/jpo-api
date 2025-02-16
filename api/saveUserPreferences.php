@@ -15,39 +15,31 @@ header("Content-Type: application/json; charset=UTF-8");
 
 include_once '../config/Database.php';
 include_once '../middleware/JWTMiddleware.php';
+include_once '../class/JWTHandler.php';
 
 JWTMiddleware::validateToken();
+$jwtHandler = new JWTHandler();
 
 $database = new Database(); // Create a new database object
 $db = $database->getConnection(); // Get database connection
-
-global $isAuth; // Create a global variable to store the authentication status
-$isAuth = false; // Set the authentication status to false by default
 
 $showPercentagesOnCharts = $_POST['showPercentagesOnCharts'] == "true" ? 1 : 0; // Get the showPercentagesOnCharts value from the POST request
 $showLegendOnCharts = $_POST['showLegendOnCharts'] == "true" ? 1 : 0; // Get the showLegendOnCharts value from the POST request
 $defaultTheme = $_POST['defaultTheme']; // Get the defaultTheme value from the POST request
 
-// Get the token from the request headers
-foreach (getallheaders() as $name => $value) { // Go through each header
-    if ($name == "Authorization") { // Check if the header is the Authorization header
-        $token = $value; // Set the token variable to the value of the Authorization header
+// Retrieve the token from the header
+$headers = getallheaders();
+        
+if (isset($headers['Authorization'])) {
+    $auth_header = $headers['Authorization'];
+    if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+        $jwt = $matches[1];
     }
 }
 
-// Query to check if the token exists in the database
-$query = "SELECT * FROM sessions
-WHERE token = :token";
-
-$stmt = $db->prepare($query);
-$stmt->bindParam(':token', $token); // Bind the token value to the query
-$stmt->execute();
-
 // Retrieve the user id
-while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
-    extract($row); // Extract row data
-    $userId = $adminId; // Set the user id to the admin id
-}
+$data = $jwtHandler->validateToken($jwt); // Get the user id from the JWT token
+$userId = $data['user_id']; // Get the user id from the JWT token
 
 // Query to update user preferences
 $query = "UPDATE userPreferences SET 
@@ -62,13 +54,13 @@ $stmt = $db->prepare($query);
 $stmt->bindParam(':showPercentagesOnCharts', $showPercentagesOnCharts);
 $stmt->bindParam(':showLegendOnCharts', $showLegendOnCharts);
 $stmt->bindParam(':defaultTheme', $defaultTheme);
-$stmt->bindParam(':adminId', $userId);
-$stmt->execute(); // Execute the query
+$stmt->bindParam(':adminId', $userId, PDO::PARAM_STR);
+$stmt->execute();
 
 // Return the user preferences
 $query = "SELECT * FROM userPreferences WHERE adminId = :adminId"; // Query to get the user preferences
 $stmt = $db->prepare($query);
-$stmt->bindParam(':adminId', $userId); // Bind the user id to the query
+$stmt->bindParam(':adminId', $userId, PDO::PARAM_STR); // Bind the user id to the query
 $stmt->execute();
 $row["userPreferences"] = $stmt->fetch(PDO::FETCH_ASSOC); // Get the user preferences
 
