@@ -1,37 +1,24 @@
 <?php
-include_once '../config/Config.php';
-header("Strict-Transport-Security: includeSubDomains");
-header("X-Content-Type-Options: nosniff");
-header("X-Frame-Options: DENY");
-header("X-XSS-Protection: 1; mode=block");
-header("Referrer-Policy: strict-origin-when-cross-origin");
-header("Content-Security-Policy: default-src 'self'");
+require_once '../controllers/ApiController.php';
+require_once '../class/DiplomaCategory.php';
 
-header("Access-Control-Allow-Origin: " . Config::get('WEBAPP_URL'));
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
+class ModifyDiplomaCategory extends ApiController {
+    public function __construct() {
+        parent::__construct('POST'); // requiresAuth defaults to true
+    }
 
-include_once '../config/Database.php';
-include_once '../class/DiplomaCategory.php';
-include_once '../middleware/JWTMiddleware.php';
+    public function processRequest() {
+        $id = intval($_POST['id']);
+        $diplomaCategoryName = $_POST['diplomaCategoryName'];
 
-JWTMiddleware::validateToken();
+        $diplomaCategory = new DiplomaCategory($this->db);
+        $diplomaCategory->setAll($diplomaCategoryName);
+        $response = $diplomaCategory->modifyDiplomaCategory($id);
 
-$database = new Database(); // Create a new database object
-$db = $database->getConnection(); // Get database connection
+        echo json_encode($response);
+    }
+}
 
-$id = intval($_POST['id']); // Get the id from the POST request
-$diplomaCategoryName = $_POST['diplomaCategoryName']; // Get the diploma category name from the POST request
-
-$diplomaCategory = new DiplomaCategory($db); // Create a new diploma category object
-
-// Set all diploma category values
-$diplomaCategory->setAll($diplomaCategoryName);
-
-$response = $diplomaCategory->modifyDiplomaCategory($id); // Modify the diploma category in the database
-
-echo json_encode($response); // Send the response as JSON
-
+$controller = new ModifyDiplomaCategory();
+$controller->processRequest();
 ?>

@@ -1,44 +1,37 @@
 <?php
-include_once '../config/Config.php';
-header("Strict-Transport-Security: includeSubDomains");
-header("X-Content-Type-Options: nosniff");
-header("X-Frame-Options: DENY");
-header("X-XSS-Protection: 1; mode=block");
-header("Referrer-Policy: strict-origin-when-cross-origin");
-header("Content-Security-Policy: default-src 'self'");
+include_once '../controllers/ApiController.php';
 
-header("Access-Control-Allow-Origin: " . Config::get('WEBAPP_URL'));
-header("Access-Control-Allow-Methods: GET");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
+class SnapshotsController extends ApiController {
+    public function __construct() {
+        parent::__construct('GET');
+    }
 
-include_once '../config/Database.php';
-include_once '../middleware/JWTMiddleware.php';
+    public function processRequest() {
+        $snapshots = array(
+            "dates" => [],
+            "attendeesCounts" => [],
+            "numberOfNewAttendees" => []
+        );
 
-JWTMiddleware::validateToken();
-
-$database = new Database(); // Create a new database object
-$db = $database->getConnection(); // Get database connection
-$db_table = "analyticsSnapshots"; // Set the database table name
-
-// Initialize snapshots array to store all snapshots
-$snapshots = array(
-    "dates" => [],
-    "attendeesCounts" => [],
-    "numberOfNewAttendees" => []
-);
-
-// Query to get all snapshots ordered by date from oldest to newest
-$query = "SELECT * FROM " . $db_table . " ORDER BY date ASC";
-$stmt = $db->prepare($query);
-$stmt->execute();
-while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
-    extract($row); // Extract row data
-
-    array_push($snapshots["dates"], $date); // Append snapshot date to snapshots array
-    array_push($snapshots["attendeesCounts"], $attendeesCount); // Append snapshot attendeesCount to snapshots array
-    array_push($snapshots["numberOfNewAttendees"], $numberOfNewAttendees); // Append snapshot numberOfNewAttendees to snapshots array
+        try {
+            $query = "SELECT * FROM analyticsSnapshots ORDER BY date ASC";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
+                extract($row); // Extract row data
+            
+                array_push($snapshots["dates"], $date); // Append snapshot date to snapshots array
+                array_push($snapshots["attendeesCounts"], $attendeesCount); // Append snapshot attendeesCount to snapshots array
+                array_push($snapshots["numberOfNewAttendees"], $numberOfNewAttendees); // Append snapshot numberOfNewAttendees to snapshots array
+            }
+            echo json_encode($snapshots);
+        } catch (Exception $e) {
+            $this->sendError($e);
+        }
+    }
 }
-echo json_encode($snapshots); // Send snapshots array as JSON response
+
+$controller = new SnapshotsController();
+$controller->processRequest();
 ?>

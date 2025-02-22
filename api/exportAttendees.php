@@ -1,126 +1,89 @@
 <?php
-include_once '../config/Config.php';
-header("Strict-Transport-Security: includeSubDomains");
-header("X-Content-Type-Options: nosniff");
-header("X-Frame-Options: DENY");
-header("X-XSS-Protection: 1; mode=block");
-header("Referrer-Policy: strict-origin-when-cross-origin");
-header("Content-Security-Policy: default-src 'self'");
-
-header("Access-Control-Allow-Origin: " . Config::get('WEBAPP_URL'));
-header("Access-Control-Allow-Methods: GET");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
-
-include_once '../config/Database.php';
-include_once '../vendor/autoload.php';
-include_once '../middleware/JWTMiddleware.php';
-
-JWTMiddleware::validateToken();
-
-$database = new Database(); // Create a new database object
-$db = $database->getConnection(); // Get database connection
-
-$query = "SELECT * FROM attendees"; // Query to get all attendees
-$stmt = $db->prepare($query);
-$stmt->execute();
+require_once '../controllers/ApiController.php';
+require_once '../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
-$spreadsheet = new Spreadsheet();
-$sheet = $spreadsheet->getActiveSheet();
+class ExportAttendees extends ApiController {
+    public function __construct() {
+        parent::__construct('GET'); // requiresAuth defaults to true
+    }
 
-// Add headers 
-$sheet->setCellValue('A1', 'ID');
+    public function processRequest() {
+        $query = "SELECT * FROM attendees";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
 
-$sheet->setCellValue('B1', 'Prenom');
-// Set the width of the column to 20
-$sheet->getColumnDimension('B')->setWidth(20);
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-$sheet->setCellValue('C1', 'Nom');
-// Set the width of the column to 20
-$sheet->getColumnDimension('C')->setWidth(20);
+        // Set headers and column widths
+        $headers = [
+            'A' => ['ID', 10],
+            'B' => ['Prenom', 20],
+            'C' => ['Nom', 20],
+            'D' => ['Email', 50],
+            'E' => ['Diplome', 20],
+            'F' => ['Categorie de diplome', 20],
+            'G' => ['Participation', 20],
+            'H' => ['Region', 30],
+            'I' => ['Satisfaction visite virtuelle', 30],
+            'J' => ['Satisfaction site web', 20]
+        ];
 
-$sheet->setCellValue('D1', 'Email');
-// Set the width of the column to 50
-$sheet->getColumnDimension('D')->setWidth(50);
+        foreach ($headers as $col => $settings) {
+            $sheet->setCellValue($col . '1', $settings[0]);
+            $sheet->getColumnDimension($col)->setWidth($settings[1]);
+        }
 
-$sheet->setCellValue('E1', 'Diplome');
-// Set the width of the column to 20
-$sheet->getColumnDimension('E')->setWidth(20);
+        $row = 2;
+        while ($row_data = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            // Get diploma name
+            $stmt2 = $this->db->prepare("SELECT diplomaName FROM diplomaTypes WHERE id = :id");
+            $stmt2->bindParam(':id', $row_data['diplomaId']);
+            $stmt2->execute();
+            $diplomaName = $stmt2->fetch(PDO::FETCH_ASSOC)['diplomaName'];
 
-$sheet->setCellValue('F1', 'Categorie de diplome');
-// Set the width of the column to 20
-$sheet->getColumnDimension('F')->setWidth(20);
+            // Get category name
+            $stmt2 = $this->db->prepare("SELECT categoryName FROM diplomaCategories WHERE id = :id");
+            $stmt2->bindParam(':id', $row_data['diplomaCategoryId']);
+            $stmt2->execute();
+            $diplomaCategoryName = $stmt2->fetch(PDO::FETCH_ASSOC)['categoryName'];
 
-$sheet->setCellValue('G1', 'Participation');
-// Set the width of the column to 20
-$sheet->getColumnDimension('G')->setWidth(20);
+            // Get region name
+            $stmt2 = $this->db->prepare("SELECT name FROM regions WHERE code = :code");
+            $stmt2->bindParam(':code', $row_data['regionalCode']);
+            $stmt2->execute();
+            $regionName = $stmt2->fetch(PDO::FETCH_ASSOC)['name'];
 
-$sheet->setCellValue('H1', 'Region');
-// Set the width of the column to 30
-$sheet->getColumnDimension('H')->setWidth(30);
+            $satisfactionMap = [0 => "Agréable", 1 => "Neutre", 2 => "Désagréable"];
+            
+            $sheet->setCellValue('A' . $row, $row_data['id'])
+                  ->setCellValue('B' . $row, $row_data['firstName'])
+                  ->setCellValue('C' . $row, $row_data['lastName'])
+                  ->setCellValue('D' . $row, $row_data['email'])
+                  ->setCellValue('E' . $row, $diplomaName)
+                  ->setCellValue('F' . $row, $diplomaCategoryName)
+                  ->setCellValue('G' . $row, $row_data['isIrlAttendee'] ? "Présentielle" : "Distancielle")
+                  ->setCellValue('H' . $row, $regionName)
+                  ->setCellValue('I' . $row, $satisfactionMap[$row_data['virtualTourSatisfaction']] ?? '')
+                  ->setCellValue('J' . $row, $satisfactionMap[$row_data['websiteSatisfaction']] ?? '');
+            $row++;
+        }
 
-$sheet->setCellValue('I1', 'Satisfaction visite virtuelle');
-// Set the width of the column to 30
-$sheet->getColumnDimension('I')->setWidth(30);
+        $fileName = 'liste_des_participants_jpo_' . date('Y-m-d_H-i-s') . '.xlsx';
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $writer->save('../documents/' . $fileName);
 
-$sheet->setCellValue('J1', 'Satisfaction site web');
-// Set the width of the column to 20
-$sheet->getColumnDimension('J')->setWidth(20);
-
-// Add data from the database
-$row = 2; 
-while ($row_data = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    // Get the name of the diploma
-    $query = "SELECT diplomaName FROM diplomaTypes WHERE diplomaId = " . $row_data['diplomaId'];
-    $stmt2 = $db->prepare($query);
-    $stmt2->execute();
-    $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
-    $diplomaName = $row2['diplomaName'];
-
-    // Get the name of the diploma category
-    $query = "SELECT categoryName FROM diplomaCategories WHERE id = " . $row_data['diplomaCategoryId'];
-    $stmt2 = $db->prepare($query);
-    $stmt2->execute();
-    $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
-    $diplomaCategoryName = $row2['categoryName'];
-
-    // Get the region name
-    $query = "SELECT name FROM regions WHERE code = " . '"' . $row_data['regionalCode'] . '"';
-    $stmt2 = $db->prepare($query);
-    $stmt2->execute();
-    $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
-    $regionName = $row2['name'];
-    
-    $sheet->setCellValue('A' . $row, $row_data['id']); 
-    $sheet->setCellValue('B' . $row, $row_data['firstName']); 
-    $sheet->setCellValue('C' . $row, $row_data['lastName']); 
-    $sheet->setCellValue('D' . $row, $row_data['email']);
-    $sheet->setCellValue('E' . $row, $diplomaName);
-    $sheet->setCellValue('F' . $row, $diplomaCategoryName);
-    // If the value is 1 then set the value to "Présentielle", if the value is 0 then set the value to "Distancielle"
-    $sheet->setCellValue('G' . $row, $row_data['isIrlAttendee'] == 1 ? "Présentielle" : "Distancielle");
-    $sheet->setCellValue('H' . $row, $regionName);
-    // If the value is 0 then set the value to "Agréable", if the value is 1 then set the value to "Neutre" and if the value is 2 then set the value to "Désagréable"
-    $sheet->setCellValue('I' . $row, $row_data['virtualTourSatisfaction'] == 0 ? "Agréable" : ($row_data['virtualTourSatisfaction'] == 1 ? "Neutre" : "Désagréable"));
-    // If the value is 0 then set the value to "Agréable", if the value is 1 then set the value to "Neutre" and if the value is 2 then set the value to "Désagréable"
-    $sheet->setCellValue('J' . $row, $row_data['websiteSatisfaction'] == 0 ? "Agréable" : ($row_data['websiteSatisfaction'] == 1 ? "Neutre" : "Désagréable"));
-    $row++;
+        echo json_encode([
+            "status" => "success",
+            "message" => "Le fichier a été exporté avec succès",
+            "fileName" => $fileName
+        ]);
+    }
 }
 
-$writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-// Save the file as 'liste_des_participants_' + the current date and time + '.xlsx'
-$fileName = 'liste_des_participants_jpo_' . date('Y-m-d_H-i-s') . '.xlsx';
-$writer->save('../documents/' . $fileName);
-
-$response = array(
-    "status" => "success",
-    "message" => "Le fichier a été exporté avec succès",
-    "fileName" => $fileName
-);
-
-echo json_encode($response); // Send the response as JSON
+$controller = new ExportAttendees();
+$controller->processRequest();
 ?>

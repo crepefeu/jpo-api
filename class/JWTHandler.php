@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../vendor/autoload.php';
+include_once __DIR__ . '/../config/Config.php';
+
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
@@ -26,7 +29,9 @@ class JWTHandler {
 
     public function validateToken($token) {
         try {
+            // Decode JWT
             $decoded = JWT::decode($token, new Key($this->jwt_secret, 'HS256'));
+            
             return [
                 'valid' => true,
                 'user_id' => $decoded->user_id

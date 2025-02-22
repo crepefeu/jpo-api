@@ -1,35 +1,30 @@
 <?php
-include_once '../config/Config.php';
-header("Strict-Transport-Security: includeSubDomains");
-header("X-Content-Type-Options: nosniff");
-header("X-Frame-Options: DENY");
-header("X-XSS-Protection: 1; mode=block");
-header("Referrer-Policy: strict-origin-when-cross-origin");
-header("Content-Security-Policy: default-src 'self'");
+require_once '../controllers/ApiController.php';
+require_once '../class/Admin.php';
+require_once '../class/JWTHandler.php';
 
-header("Access-Control-Allow-Origin: " . Config::get('WEBAPP_URL'));
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
+class SignIn extends ApiController {
+    public function __construct() {
+        parent::__construct('POST', false);
+    }
 
-include_once '../config/Database.php';
-include_once '../class/Admin.php';
-include_once '../class/JWTHandler.php';
+    public function processRequest() {
+        $login = $_POST['login'];
+        $password = $_POST['password'];
 
-$database = new Database();
-$db = $database->getConnection();
-$login = $_POST['login'];
-$password = $_POST['password'];
+        $admin = new Admin($this->db, $login, $password);
+        $response = $admin->login();
 
-$admin = new Admin($db, $login, $password);
-$response = $admin->login();
+        if ($response['status'] === 'success') {
+            $jwt = new JWTHandler();
+            $token = $jwt->generateToken($response['id']);
+            $response['token'] = $token;
+        }
 
-if ($response['status'] === 'success') {
-    $jwt = new JWTHandler();
-    $token = $jwt->generateToken($response['id']);
-    $response['token'] = $token;
+        echo json_encode($response);
+    }
 }
 
-echo json_encode($response);
+$controller = new SignIn();
+$controller->processRequest();
 ?>
