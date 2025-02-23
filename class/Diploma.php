@@ -1,4 +1,6 @@
 <?php
+use Ramsey\Uuid\Uuid;
+
 class Diploma
 {
     // Connection
@@ -6,7 +8,7 @@ class Diploma
     // Table
     private string $db_table = "diplomaTypes";
     // Columns
-    private int $diplomaId;
+    private string $diplomaId; // Change type to string for UUID
 
     private int $categoryId;
 
@@ -28,11 +30,14 @@ class Diploma
     // Add diploma
     public function addDiploma()
     {
-        $query = "INSERT INTO " . $this->db_table . " (categoryId, diplomaName) VALUES (:categoryId, :diplomaName)"; // Query to add diploma
+        $this->diplomaId = Uuid::uuid4()->toString(); // Generate new UUID
+
+        $query = "INSERT INTO " . $this->db_table . " (diplomaId, categoryId, diplomaName) VALUES (:diplomaId, :categoryId, :diplomaName)"; // Query to add diploma
 
         $stmt = $this->conn->prepare($query);
 
         // Bind parameters
+        $stmt->bindParam(":diplomaId", $this->diplomaId);
         $stmt->bindParam(":categoryId", $this->categoryId);
         $stmt->bindParam(":diplomaName", $this->diplomaName);
 

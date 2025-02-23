@@ -1,18 +1,30 @@
 <?php
-header("Access-Control-Allow-Origin: *"); // Allow cross-origin requests from any domain TODO: Change this to the domain of the website when deploying
-header("Content-Type: application/json; charset=UTF-8"); // Set the response type to JSON and set charset to UTF-8
-header("Access-Control-Allow-Methods: POST"); // Allow POST method only
+require_once '../controllers/ApiController.php';
+require_once '../class/Admin.php';
+require_once '../class/JWTHandler.php';
 
-include_once '../config/Database.php';
-include_once '../class/Admin.php';
+class SignIn extends ApiController {
+    public function __construct() {
+        parent::__construct('POST', false);
+    }
 
-$database = new Database();
-$db = $database->getConnection();
-$login = $_POST['login'];
-$password = $_POST['password'];
+    public function processRequest() {
+        $login = $_POST['login'];
+        $password = $_POST['password'];
 
-$admin = new Admin($db, $login, $password);
-$response = $admin->login();
+        $admin = new Admin($this->db, $login, $password);
+        $response = $admin->login();
 
-echo json_encode($response);
+        if ($response['status'] === 'success') {
+            $jwt = new JWTHandler();
+            $token = $jwt->generateToken($response['id']);
+            $response['token'] = $token;
+        }
+
+        echo json_encode($response);
+    }
+}
+
+$controller = new SignIn();
+$controller->processRequest();
 ?>

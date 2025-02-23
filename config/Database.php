@@ -1,23 +1,40 @@
 <?php
+// Fix autoload path
+require __DIR__ . '/../vendor/autoload.php';
+
+use Dotenv\Dotenv;
+
 class Database {
-private $host = "localhost";
-private $database_name = "jpo_iut_meaux_mmi";
-private $username = "root";
-private $password = "";
-public $conn;
+    private $host;
+    private $database_name;
+    private $username;
+    private $password;
+    public $conn;
 
-// Get the database connection
-public function getConnection() {
-    $this->conn = null; // Reset the connection
+    public function __construct() {
+        try {
+            $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+            $dotenv->load();
 
-    // Try to connect to the database and catch any errors
-    try {
-        $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->database_name, $this->username, $this->password);
-        $this->conn->exec("set names utf8");
-    } catch(PDOException $exception) {
-        echo "Erreur de connexion à la base de données: " . $exception->getMessage(); // Display the error message
+            $this->host = $_ENV['DB_HOST'];
+            $this->database_name = $_ENV['DB_NAME'];
+            $this->username = $_ENV['DB_USER'];
+            $this->password = $_ENV['DB_PASS'];
+        } catch(Exception $e) {
+            echo "Error loading environment: " . $e->getMessage();
+        }
     }
 
-    return $this->conn; // Return the connection
+    public function getConnection() {
+        $this->conn = null;
+
+        try {
+            $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->database_name, $this->username, $this->password);
+            $this->conn->exec("set names utf8");
+        } catch(PDOException $exception) {
+            echo "Erreur de connexion à la base de données: " . $exception->getMessage();
+        }
+
+        return $this->conn;
     }
 }

@@ -1,36 +1,43 @@
 <?php
-header("Access-Control-Allow-Origin: *"); // Allow cross-origin requests from any domain TODO: Change this to the domain of the website when deploying
-header("Content-Type: application/json; charset=UTF-8"); // Set the response type to JSON and set charset to UTF-8
+include_once '../controllers/ApiController.php';
 
-include_once '../config/Database.php';
+class IsAuthController extends ApiController {
+    public function __construct() {
+        parent::__construct('GET');
+    }
 
-$database = new Database();
-$db = $database->getConnection();
-$db_table = "sessions";
+    public function processRequest() {
+        try {
+            $isAuth = false;
+            $token = null;
+            
+            $headers = getallheaders();
+            if (!isset($headers['Authorization'])) {
+                echo json_encode(['isAuthenticated' => false, 'reason' => 'No authorization header']);
+                return;
+            }
 
-global $isAuth;
-$isAuth = false;
+            $auth_header = $headers['Authorization'];
+            if (!preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+                echo json_encode(['isAuthenticated' => false, 'reason' => 'Invalid token format']);
+                return;
+            }
 
-// Get the token from the request headers
-foreach (getallheaders() as $name => $value) { // Go through each header
-    if ($name == "Authorization") { // Check if the header is the Authorization header
-        $token = $value; // Set the token variable to the value of the Authorization header
+            $token = $matches[1];
+            $jwt = new JWTHandler();
+            $result = $jwt->validateToken($token);
+            $isAuth = ($result['valid'] && $result['user_id']);
+
+            echo json_encode([
+                'isAuthenticated' => $isAuth,
+                'reason' => $isAuth ? 'Valid token' : 'Invalid token',
+            ]);
+            
+        } catch (Exception $e) {
+            $this->sendError($e);
+        }
     }
 }
 
-// Check if the token exists in database
-$query = "SELECT * FROM " . $db_table . "
-WHERE token = :token";
-
-$stmt = $db->prepare($query);
-$stmt->bindParam(':token', $token); // Bind the token value to the query
-$stmt->execute(); // Execute the query
-
-if ($stmt->rowCount() > 0) { // Check if the token exists in the database
-    $isAuth = true; // Set the authentication status to true
-} else {
-    $isAuth = false; // Set the authentication status to false
-}
-
-echo json_encode($isAuth); // Send the authentication status as JSON response
-?>
+$controller = new IsAuthController();
+$controller->processRequest();

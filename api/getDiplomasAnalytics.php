@@ -1,55 +1,54 @@
 <?php
-header("Access-Control-Allow-Origin: *"); // Allow cross-origin requests from any domain TODO: Change this to the domain of the website when deploying
-header("Content-Type: application/json; charset=UTF-8"); // Set the response type to JSON and set charset to UTF-8
-header("Access-Control-Allow-Methods: GET"); // Allow GET method only
+include_once '../controllers/ApiController.php';
+header("Access-Control-Allow-Origin: " . Config::get('WEBAPP_URL'));
 
-include_once '../config/Database.php';
-include_once 'checkAuthentication.php'; // Check if the user is authenticated
+class DiplomasAnalyticsController extends ApiController {
+    public function __construct() {
+        parent::__construct('GET');
+    }
 
-if (!$isAuth) { // Check if the user is authenticated
-    $response = array(
-        "status" => "error",
-        "message" => "Vous n'êtes pas authentifié"
-    ); // Create an error response
-    echo json_encode($response); // Send the response as JSON
-    die(); // Stop executing the script
-}
+    public function processRequest() {
+        $db_table = "diplomaTypes";
+        $diplomas = array(
+            "names" => [],
+            "counts" => [],
+        );
 
-$database = new Database(); // Create a new database object
-$db = $database->getConnection(); // Get database connection
+        $query = "SELECT 
+            diplomaTypes.id as diplomaId, 
+            diplomaTypes.diplomaName, 
+            diplomaCategories.id as categoryId,
+            diplomaCategories.categoryName 
+        FROM " . $db_table . " 
+        INNER JOIN diplomaCategories ON diplomaTypes.categoryId = diplomaCategories.id 
+        ORDER BY diplomaTypes.diplomaName ASC";
 
-$db_table = "diplomaTypes"; // Set the database table name
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
 
-// Initialize diplomas array to store diploma data
-$diplomas = array(
-    "names" => [],
-    "counts" => [],
-);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $diplomaId = preg_replace('/\s+/', '', $row['diplomaId']);
+            $diplomaName = $row['diplomaName'];
 
-// Query to get all diploma types and inner join with diplomaCategories and order by diplomaId
-$query = "SELECT * FROM " . $db_table . " 
-INNER JOIN diplomaCategories ON diplomaTypes.categoryId = diplomaCategories.id ORDER BY diplomaTypes.diplomaId ASC";
-
-$stmt = $db->prepare($query);
-$stmt->execute();
-while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
-    extract($row); // Extract row data
-
-    // Query to get the diploma count accross all attendees
-    $query2 = "SELECT COUNT(*) AS diplomaCount FROM attendees WHERE diplomaId = " . $diplomaId;
-    $stmt2 = $db->prepare($query2);
-    $stmt2->execute();
-    $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
-    extract($row2);
-    
-    // Append data to diplomas array
-    if ($diplomaCount == 0) {
-        continue; // Skip diplomas with 0 attendees
-    } else {
-        array_push($diplomas["names"], $diplomaName); // Append diploma name to diplomas array
-        array_push($diplomas["counts"], $diplomaCount); // Append diploma count to diplomas array
+            $query2 = "SELECT COUNT(*) AS diplomaCount FROM attendees WHERE diplomaId = :id";
+            $stmt2 = $this->db->prepare($query2);
+            $stmt2->bindParam(':id', $diplomaId, PDO::PARAM_STR);
+            $stmt2->execute();
+            
+            $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+            $diplomaCount = (int)$row2['diplomaCount'];
+            
+            if ($diplomaCount > 0) {
+                array_push($diplomas["names"], $diplomaName);
+                array_push($diplomas["counts"], $diplomaCount);
+            }
+        }
+        
+        echo json_encode($diplomas);
     }
 }
-echo json_encode($diplomas); // Send diplomas array as JSON response
+
+$controller = new DiplomasAnalyticsController();
+$controller->processRequest();
 ?>
 

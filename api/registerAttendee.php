@@ -1,41 +1,44 @@
 <?php
-header("Access-Control-Allow-Origin: *"); // Allow cross-origin requests from any domain TODO: Change this to the domain of the website when deploying
-header("Content-Type: application/json; charset=UTF-8"); // Set the response type to JSON and set charset to UTF-8
-header("Access-Control-Allow-Methods: POST"); // Allow POST method only
+require_once '../controllers/ApiController.php';
+require_once '../class/Attendee.php';
 
-include_once '../config/Database.php';
-include_once '../class/Attendee.php';
+class RegisterAttendee extends ApiController {
+    public function __construct() {
+        parent::__construct('POST', false);
+    }
 
-$database = new Database(); // Create a new database object
-$db = $database->getConnection(); // Get database connection
-$firstName = $_POST['firstName']; // Get the first name from the POST request
-$lastName = $_POST['lastName']; // Get the last name from the POST request
-$email = $_POST['email']; // Get the email from the POST request
-$diplomaId = intval($_POST['diplomaId']); // Get the diploma id from the POST request
-$diplomaCategoryId = intval($_POST['diplomaCategoryId']); // Get the diploma category id from the POST request
-$isIrlAttendee = $_POST['isIrlAttendee'] == "true" ? 1 : 0; // Get the isIrlAttendee value from the POST request and set it to 1 if it is true otherwise set it to 0
-$regionalCode = $_POST['regionalCode']; // Get the regional code from the POST request
-$virtualTourSatisfaction = $_POST['virtualTourSatisfaction']; // Get the virtual tour satisfaction from the POST request
-$websiteSatisfaction = $_POST['websiteSatisfaction']; // Get the website satisfaction from the POST request
+    public function processRequest() {
+        $firstName = $_POST['firstName'];
+        $lastName = $_POST['lastName'];
+        $email = $_POST['email'];
+        $diplomaId = intval($_POST['diplomaId']);
+        $diplomaCategoryId = intval($_POST['diplomaCategoryId']);
+        $isIrlAttendee = $_POST['isIrlAttendee'] == "true" ? 1 : 0;
+        $regionalCode = $_POST['regionalCode'];
+        
+        $virtualTourSatisfaction = isset($_POST['virtualTourSatisfaction']) ? 
+            intval($_POST['virtualTourSatisfaction']) : null;
+        $websiteSatisfaction = isset($_POST['websiteSatisfaction']) ? 
+            intval($_POST['websiteSatisfaction']) : null;
 
-if ($virtualTourSatisfaction !== null) { // If the virtualTourSatisfaction value is set then set it to an integer otherwise set it to null
-    $virtualTourSatisfaction = intval($_POST['virtualTourSatisfaction']);
-} else {
-    $virtualTourSatisfaction = null;
+        $attendee = new Attendee($this->db);
+        $attendee->setAllValues(
+            $firstName, 
+            $lastName, 
+            $email, 
+            $diplomaId, 
+            $diplomaCategoryId, 
+            $isIrlAttendee, 
+            $regionalCode, 
+            $virtualTourSatisfaction, 
+            $websiteSatisfaction
+        );
+
+        $response = $attendee->createAttendee();
+        echo json_encode($response);
+    }
 }
 
-if ($websiteSatisfaction !== null) { // If the websiteSatisfaction value is set then set it to an integer otherwise set it to null
-    $websiteSatisfaction = intval($_POST['websiteSatisfaction']);
-} else {
-    $websiteSatisfaction = null;
-}
-
-$attendee = new Attendee($db); // Create a new attendee object
-
-// Set all attendee values
-$attendee->setAllValues($firstName, $lastName, $email, $diplomaId, $diplomaCategoryId, $isIrlAttendee, $regionalCode, $virtualTourSatisfaction, $websiteSatisfaction);
-
-$response = $attendee->createAttendee(); // Create the attendee in the database
-
-echo json_encode($response); // Send the response as JSON
+$controller = new RegisterAttendee();
+$controller->processRequest();
 ?>

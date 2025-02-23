@@ -1,4 +1,6 @@
 <?php
+use Ramsey\Uuid\Uuid;
+
 class Admin
 {
     // Connection
@@ -6,7 +8,7 @@ class Admin
     // Table
     private string $db_table = "admins";
     // Columns
-    private $id;
+    private string $id; // Change type to string for UUID
 
     private string $displayName;
 
@@ -42,7 +44,7 @@ class Admin
             if (password_verify($this->password, $row["password"])) {
 
                 // Create session token 
-                $token = bin2hex(random_bytes(32));
+                $token = Uuid::uuid4()->toString();
 
                 // Insert token into database
                 $query = "INSERT INTO sessions (adminId, token) VALUES (:adminId, :token)";
@@ -82,6 +84,7 @@ class Admin
                     'message' => 'Connexion réussie',
                     'displayName' => $row["displayName"],
                     'token' => $token,
+                    'id' => $row["id"],
                     'userPreferences' => $row["userPreferences"]
                 );
 

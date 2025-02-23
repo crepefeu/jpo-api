@@ -1,0 +1,127 @@
+name: Deploy PHP API
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: PROD
+      DB_HOST: localhost
+      DB_NAME: jpo_iut_meaux_mmi
+      DB_USER: WEB_APP
+      DB_PASS: ${{ secrets.DB_PASSWORD }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache Composer packages
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-php-
+
+      - name: Install dependencies
+        if: hashFiles('composer.json') != ''
+        run: composer install --prefer-dist --no-progress
+
+      - name: Setup environment file
+        run: |
+          cp .env.production .env
+          sed -i "s|\${DB_USER}|${{ secrets.DB_USER }}|g" .env
+          sed -i "s|\${DB_PASSWORD}|${{ secrets.DB_PASSWORD }}|g" .env
+          sed -i "s|\${JWT_SECRET}|${{ secrets.JWT_SECRET }}|g" .env
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            .
+            .env
+            !.git
+            !.github
+            !tests
+            !.htaccess
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: .
+
+      - name: Deploy to AWS EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            # Setup application directory
+            sudo mkdir -p /var/www/jpo-api
+            cd /var/www/jpo-api
+
+            # Clean up existing files except configuration
+            sudo find . -mindepth 1 ! -regex '^.*/\..*' ! -name '*.conf' -delete
+
+            # Copy new files from artifacts
+            scp -r ./* ubuntu@${{ secrets.AWS_HOST }}:/var/www/jpo-api/
+
+            # Set proper permissions
+            sudo chown -R www-data:www-data .
+            sudo chmod -R 755 .
+
+            # Copy Nginx configuration
+            sudo cp nginx/jpo-api.conf /etc/nginx/sites-available/
+            sudo ln -sf /etc/nginx/sites-available/jpo-api.conf /etc/nginx/sites-enabled/
+
+            # Restart services
+            sudo systemctl restart php8.1-fpm
+            sudo nginx -t && sudo systemctl restart nginx
+
+      - name: Extract and configure
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            echo "📦 Extracting deployment files..."
+            cd /var/www/jpo-api
+            tar -xzf deploy.tar.gz
+            rm deploy.tar.gz
+
+            # Debug: Check if .env exists and its contents
+            echo "🔍 Checking .env file..."
+            if [ -f ".env" ]; then
+                echo "✅ .env file exists"
+                ls -la .env
+                echo "First few lines of .env:"
+                head -n 3 .env
+            else
+                echo "❌ .env file is missing"
+                echo "Creating .env file..."
+                echo "APP_ENV=production" > .env
+                echo "DB_HOST=localhost" >> .env
+                echo "DB_NAME=jpo_iut_meaux_mmi" >> .env
+                echo "DB_USER=WEB_APP" >> .env
+                echo "DB_PASS=${{ secrets.DB_PASSWORD }}" >> .env
+                echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+                echo "RATE_LIMIT_WINDOW=60" >> .env
+                echo "RATE_LIMIT_MAX_REQUESTS=100" >> .env
+            fi
+
+            # Ensure proper permissions for .env
+            sudo chown www-data:www-data .env
+            sudo chmod 640 .env

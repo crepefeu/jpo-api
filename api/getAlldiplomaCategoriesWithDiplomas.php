@@ -1,51 +1,46 @@
 <?php
-header("Access-Control-Allow-Origin: *"); // Allow cross-origin requests from any domain TODO: Change this to the domain of the website when deploying
-header("Content-Type: application/json; charset=UTF-8"); // Set the response type to JSON and set charset to UTF-8
-header("Access-Control-Allow-Methods: GET"); // Allow GET method only
+require_once '../controllers/ApiController.php';
 
-include_once '../config/Database.php';
-
-$database = new Database();
-$db = $database->getConnection();
-$db_table = "diplomaCategories";
-
-// Query to get all diploma categories inner join diplomas and order by id
-$query = "SELECT * FROM " . $db_table . " ORDER BY id ASC";
-$stmt = $db->prepare($query);
-$stmt->execute();
-
-while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { // Go through each row
-    unset($diplomas); // Clean up the array before we use it to store diplomas
-
-    extract($row); // extract the category data
-
-    // Query to get all diplomas for the category
-    $query2 = "SELECT * FROM diplomaTypes WHERE categoryId = " . $id;
-    $stmt2 = $db->prepare($query2);
-    $stmt2->execute();
-    while ($row2 = $stmt2->fetch(PDO::FETCH_ASSOC)) { // Go through each row
-        extract($row2);
-
-        // Store diploma data in an array
-        $diploma = array(
-            "id" => $diplomaId,
-            "name" => $diplomaName
-        );
-
-        // Add the diploma to the diplomas array
-        $diplomas[] = $diploma;
+class GetAllDiplomaCategoriesWithDiplomas extends ApiController {
+    public function __construct() {
+        parent::__construct('GET', false);
     }
 
-    // Create the diploma category array with category data and corresponding diplomas array
-    $diplomaCategory = array(
-        "id" => $id,
-        "name" => $categoryName,
-        "diplomas" => $diplomas
-    );
-
-    // Add the category to the diplomaCategories array
-    $diplomaCategories[] = $diplomaCategory;
+    public function processRequest() {
+        $query = "SELECT * FROM diplomaCategories ORDER BY id ASC";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
+        
+        $diplomaCategories = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            extract($row);
+            
+            // Get diplomas for this category
+            $query2 = "SELECT * FROM diplomaTypes WHERE categoryId = :categoryId";
+            $stmt2 = $this->db->prepare($query2);
+            $stmt2->bindParam(':categoryId', $id, PDO::PARAM_STR);
+            $stmt2->execute();
+            
+            $diplomas = [];
+            while ($row2 = $stmt2->fetch(PDO::FETCH_ASSOC)) {
+                extract($row2);
+                $diplomas[] = array(
+                    "id" => $id,
+                    "name" => $diplomaName
+                );
+            }
+            
+            $diplomaCategories[] = array(
+                "id" => $id,
+                "name" => $categoryName,
+                "diplomas" => $diplomas
+            );
+        }
+        
+        echo json_encode($diplomaCategories);
+    }
 }
 
-echo json_encode($diplomaCategories); // Send diplomaCategories array as JSON response
+$controller = new GetAllDiplomaCategoriesWithDiplomas();
+$controller->processRequest();
 ?>
