@@ -1,0 +1,93 @@
+name: Deploy PHP API
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: PROD
+      DB_HOST: localhost
+      DB_NAME: jpo_iut_meaux_mmi
+      DB_USER: WEB_APP
+      DB_PASS: ${{ secrets.DB_PASSWORD }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache Composer packages
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-php-
+
+      - name: Install dependencies
+        if: hashFiles('composer.json') != ''
+        run: composer install --prefer-dist --no-progress
+
+      - name: Setup environment file
+        run: |
+          cp .env.production .env
+          sed -i "s|\${DB_USER}|${{ secrets.DB_USER }}|g" .env
+          sed -i "s|\${DB_PASSWORD}|${{ secrets.DB_PASSWORD }}|g" .env
+          sed -i "s|\${JWT_SECRET}|${{ secrets.JWT_SECRET }}|g" .env
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            .
+            !.git
+            !.github
+            !tests
+            !.htaccess
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: .
+
+      - name: Deploy to AWS EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            # Setup application directory
+            sudo mkdir -p /var/www/jpo-api
+            cd /var/www/jpo-api
+
+            # Clean up existing files except configuration
+            sudo find . -mindepth 1 ! -regex '^.*/\..*' ! -name '*.conf' -delete
+
+            # Copy new files from artifacts
+            scp -r ./* ubuntu@${{ secrets.AWS_HOST }}:/var/www/jpo-api/
+
+            # Set proper permissions
+            sudo chown -R www-data:www-data .
+            sudo chmod -R 755 .
+
+            # Copy Nginx configuration
+            sudo cp nginx/jpo-api.conf /etc/nginx/sites-available/
+            sudo ln -sf /etc/nginx/sites-available/jpo-api.conf /etc/nginx/sites-enabled/
+
+            # Restart services
+            sudo systemctl restart php8.1-fpm
+            sudo nginx -t && sudo systemctl restart nginx
