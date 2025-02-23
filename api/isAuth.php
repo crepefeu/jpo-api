@@ -13,20 +13,26 @@ class IsAuthController extends ApiController {
             
             $headers = getallheaders();
             if (!isset($headers['Authorization'])) {
-                echo json_encode(['isAuthenticated' => false, 'reason' => 'No authorization header']);
+                echo json_encode([
+                    'isAuthenticated' => false,
+                    'reason' => 'Invalid token'
+                ]);
                 return;
             }
 
             $auth_header = $headers['Authorization'];
             if (!preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
-                echo json_encode(['isAuthenticated' => false, 'reason' => 'Invalid token format']);
+                echo json_encode([
+                    'isAuthenticated' => false,
+                    'reason' => 'Invalid token'
+                ]);
                 return;
             }
 
             $token = $matches[1];
             $jwt = new JWTHandler();
             $result = $jwt->validateToken($token);
-            $isAuth = ($result['valid'] && $result['user_id']) ? true : false;
+            $isAuth = ($result['valid'] === true && !empty($result['user_id']));
 
             echo json_encode([
                 'isAuthenticated' => $isAuth,
