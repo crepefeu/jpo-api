@@ -61,6 +61,11 @@ jobs:
           name: build-artifacts
           path: .
 
+      - name: Create deployment package
+        run: |
+          tar -czf deploy.tar.gz *
+          ls -la deploy.tar.gz
+
       - name: Deploy to AWS EC2
         uses: appleboy/ssh-action@master
         with:
@@ -75,53 +80,60 @@ jobs:
             # Clean up existing files except configuration
             sudo find . -mindepth 1 ! -regex '^.*/\..*' ! -name '*.conf' -delete
 
-            # Copy new files from artifacts
-            scp -r ./* ubuntu@${{ secrets.AWS_HOST }}:/var/www/jpo-api/
+      - name: Transfer files
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_KEY }}
+          source: "deploy.tar.gz"
+          target: "/var/www/jpo-api"
 
-            # Set proper permissions
-            sudo chown -R www-data:www-data .
-            sudo chmod -R 755 .
-
-            # Copy Nginx configuration
-            sudo cp nginx/jpo-api.conf /etc/nginx/sites-available/
-            sudo ln -sf /etc/nginx/sites-available/jpo-api.conf /etc/nginx/sites-enabled/
-
-            # Restart services
-            sudo systemctl restart php8.1-fpm
-            sudo nginx -t && sudo systemctl restart nginx
-
-      - name: Extract and configure
+      - name: Configure deployment
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.AWS_HOST }}
           username: ubuntu
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            echo "📦 Extracting deployment files..."
             cd /var/www/jpo-api
-            tar -xzf deploy.tar.gz
-            rm deploy.tar.gz
+            
+            # Extract files with sudo
+            sudo tar -xzf deploy.tar.gz
+            sudo rm deploy.tar.gz
 
-            # Debug: Check if .env exists and its contents
-            echo "🔍 Checking .env file..."
-            if [ -f ".env" ]; then
-                echo "✅ .env file exists"
-                ls -la .env
-                echo "First few lines of .env:"
-                head -n 3 .env
-            else
-                echo "❌ .env file is missing"
-                echo "Creating .env file..."
-                echo "APP_ENV=production" > .env
-                echo "DB_HOST=localhost" >> .env
-                echo "DB_NAME=jpo_iut_meaux_mmi" >> .env
-                echo "DB_USER=WEB_APP" >> .env
-                echo "DB_PASS=${{ secrets.DB_PASSWORD }}" >> .env
-                echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-                echo "RATE_LIMIT_WINDOW=60" >> .env
-                echo "RATE_LIMIT_MAX_REQUESTS=100" >> .env
+            # Create .env file with sudo
+            sudo bash -c 'cat > .env << EOL
+            APP_ENV=production
+            DB_HOST=localhost
+            DB_NAME=jpo_iut_meaux_mmi
+            DB_USER=WEB_APP
+            DB_PASS=${{ secrets.DB_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            RATE_LIMIT_WINDOW=60
+            RATE_LIMIT_MAX_REQUESTS=100
+            EOL'
+
+            # Set proper permissions
+            sudo chown -R www-data:www-data .
+            sudo chmod -R 755 .
+            sudo chmod 640 .env
+
+            # Configure Nginx
+            if [ ! -f "nginx/jpo-api.conf" ]; then
+              echo "Error: Nginx configuration file not found!"
+              exit 1
+            fi
+            
+            sudo cp nginx/jpo-api.conf /etc/nginx/sites-available/
+            sudo ln -sf /etc/nginx/sites-available/jpo-api.conf /etc/nginx/sites-enabled/
+
+            # Validate Nginx configuration
+            if ! sudo nginx -t; then
+              echo "Error: Invalid Nginx configuration"
+              exit 1
             fi
 
-            # Ensure proper permissions for .env
-            sudo chown www-data:www-data .env
-            sudo chmod 640 .env
+            # Restart services
+            sudo systemctl restart php8.4-fpm
+            sudo systemctl restart nginx
