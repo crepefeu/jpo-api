@@ -61,7 +61,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
-          path: .
+          path: ./build
 
       - name: Deploy to AWS EC2
         uses: appleboy/ssh-action@master
@@ -72,22 +72,71 @@ jobs:
           script: |
             # Setup application directory
             sudo mkdir -p /var/www/jpo-api
-            cd /var/www/jpo-api
+            sudo mkdir -p /etc/nginx/sites-available
+            sudo mkdir -p /etc/nginx/sites-enabled
 
             # Clean up existing files except configuration
+            cd /var/www/jpo-api
             sudo find . -mindepth 1 ! -regex '^.*/\..*' ! -name '*.conf' -delete
 
-            # Copy new files from artifacts
-            scp -r ./* ubuntu@${{ secrets.AWS_HOST }}:/var/www/jpo-api/
+      - name: Copy files to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_KEY }}
+          source: "./build/*"
+          target: "/var/www/jpo-api/"
+          strip_components: 1
+
+      - name: Configure and restart services
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            cd /var/www/jpo-api
 
             # Set proper permissions
             sudo chown -R www-data:www-data .
             sudo chmod -R 755 .
 
+            # Check PHP-FPM version and service
+            PHP_VERSION=$(php -v | head -n1 | cut -d' ' -f2 | cut -d'.' -f1,2)
+            PHP_FPM_SERVICE="php${PHP_VERSION}-fpm"
+
+            # Create basic Nginx config if it doesn't exist
+            if [ ! -f "nginx/jpo-api.conf" ]; then
+              sudo mkdir -p nginx
+              echo "server {
+                listen 80;
+                server_name _;
+                root /var/www/jpo-api/public;
+                index index.php;
+
+                location / {
+                  try_files \$uri \$uri/ /index.php?\$query_string;
+                }
+
+                location ~ \.php$ {
+                  include fastcgi_params;
+                  fastcgi_pass unix:/run/php/php${PHP_VERSION}-fpm.sock;
+                  fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+                }
+              }" | sudo tee nginx/jpo-api.conf
+            fi
+
             # Copy Nginx configuration
             sudo cp nginx/jpo-api.conf /etc/nginx/sites-available/
             sudo ln -sf /etc/nginx/sites-available/jpo-api.conf /etc/nginx/sites-enabled/
 
+            # Install PHP-FPM if not present
+            if ! dpkg -l | grep -q "^ii.*${PHP_FPM_SERVICE}"; then
+              sudo apt-get update
+              sudo apt-get install -y ${PHP_FPM_SERVICE}
+            fi
+
             # Restart services
-            sudo systemctl restart php8.1-fpm
+            sudo systemctl restart ${PHP_FPM_SERVICE} || echo "Failed to restart PHP-FPM"
             sudo nginx -t && sudo systemctl restart nginx
