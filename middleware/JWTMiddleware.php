@@ -24,7 +24,6 @@ class JWTMiddleware {
         
         if (!$result['valid'] || !$result['user_id']) {
             http_response_code(401);
-            echo json_encode(["message" => "Invalid token"]);
             exit();
         }
     }

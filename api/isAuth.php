@@ -3,7 +3,7 @@ include_once '../controllers/ApiController.php';
 
 class IsAuthController extends ApiController {
     public function __construct() {
-        parent::__construct('GET');
+        parent::__construct('GET', true, true);
     }
 
     public function processRequest() {
@@ -32,7 +32,7 @@ class IsAuthController extends ApiController {
             $token = $matches[1];
             $jwt = new JWTHandler();
             $result = $jwt->validateToken($token);
-            $isAuth = ($result['valid'] === true && !empty($result['user_id']));
+            $isAuth = $result['valid'] && !empty($result['user_id']);
 
             echo json_encode([
                 'isAuthenticated' => $isAuth,
