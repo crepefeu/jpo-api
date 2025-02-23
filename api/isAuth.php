@@ -26,7 +26,7 @@ class IsAuthController extends ApiController {
             $token = $matches[1];
             $jwt = new JWTHandler();
             $result = $jwt->validateToken($token);
-            $isAuth = ($result['valid'] && $result['user_id']);
+            $isAuth = ($result['valid'] && $result['user_id']) ? true : false;
 
             echo json_encode([
                 'isAuthenticated' => $isAuth,
