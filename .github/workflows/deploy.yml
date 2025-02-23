@@ -137,6 +137,7 @@ jobs:
             DB_NAME=jpo_iut_meaux_mmi
             DB_USER=WEB_APP
             DB_PASS=${{ secrets.DB_PASSWORD }}
+            WEBAPP_URL=https://jpo.3st3ban.dev
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             RATE_LIMIT_WINDOW=60
             RATE_LIMIT_MAX_REQUESTS=100
