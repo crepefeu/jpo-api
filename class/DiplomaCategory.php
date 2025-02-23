@@ -29,6 +29,8 @@ class DiplomaCategory
 
         $stmt = $this->conn->prepare($query);
 
+        $this->categoryName = htmlspecialchars($this->categoryName);
+
         // Bind parameters
         $stmt->bindParam(":categoryName", $this->categoryName);
 
@@ -58,6 +60,8 @@ class DiplomaCategory
             WHERE id = :id"; // Query to modify diploma category
 
         $stmt = $this->conn->prepare($query);
+
+        $this->categoryName = htmlspecialchars($this->categoryName);
 
         // Bind parameters
         $stmt->bindParam(":categoryName", $this->categoryName);

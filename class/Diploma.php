@@ -36,6 +36,10 @@ class Diploma
 
         $stmt = $this->conn->prepare($query);
 
+        //sanitize data
+        $this->categoryId = htmlspecialchars($this->categoryId);
+        $this->diplomaName = htmlspecialchars($this->diplomaName);
+
         // Bind parameters
         $stmt->bindParam(":diplomaId", $this->diplomaId);
         $stmt->bindParam(":categoryId", $this->categoryId);
@@ -66,6 +70,10 @@ class Diploma
             WHERE diplomaId = :id";
 
         $stmt = $this->conn->prepare($query);
+
+        //sanitize data
+        $this->categoryId = htmlspecialchars($this->categoryId);
+        $this->diplomaName = htmlspecialchars($this->diplomaName);        
 
         // Bind parameters
         $stmt->bindParam(":id", $id);

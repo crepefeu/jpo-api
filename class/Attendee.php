@@ -81,6 +81,11 @@ class Attendee
             $query = "INSERT INTO " . $this->db_table . " (firstName, lastName, email, diplomaId, diplomaCategoryId, isIrlAttendee, regionalCode, virtualTourSatisfaction, websiteSatisfaction) VALUES (:firstName, :lastName, :email, :diplomaId, :diplomaCategoryId, :isIrlAttendee, :regionalCode, :virtualTourSatisfaction, :websiteSatisfaction)";
             $stmt = $this->conn->prepare($query);
 
+            $this->firstName = htmlspecialchars($this->firstName);
+            $this->lastName = htmlspecialchars($this->lastName);
+            $this->email = htmlspecialchars($this->email);
+            $this->regionalCode = htmlspecialchars($this->regionalCode);
+
             // Bind parameters
             $stmt->bindParam(":firstName", $this->firstName);
             $stmt->bindParam(":lastName", $this->lastName);
@@ -127,6 +132,11 @@ class Attendee
                 SET firstName = :firstName, lastName = :lastName, diplomaId = :diplomaId, diplomaCategoryId = :diplomaCategoryId, isIrlAttendee = :isIrlAttendee, regionalCode = :regionalCode 
                 WHERE id = :id";
             $stmt = $this->conn->prepare($query);
+
+            $this->firstName = htmlspecialchars($this->firstName);
+            $this->lastName = htmlspecialchars($this->lastName);
+            $this->email = htmlspecialchars($this->email);
+            $this->regionalCode = htmlspecialchars($this->regionalCode);
 
             // Bind parameters
             $stmt->bindParam(":id", $originalData['id']);
@@ -180,6 +190,11 @@ class Attendee
                 SET firstName = :firstName, lastName = :lastName, email = :email, diplomaId = :diplomaId, diplomaCategoryId = :diplomaCategoryId, isIrlAttendee = :isIrlAttendee, regionalCode = :regionalCode 
                 WHERE id = :id";
                 $stmt = $this->conn->prepare($query);
+
+                $this->firstName = htmlspecialchars($this->firstName);
+                $this->lastName = htmlspecialchars($this->lastName);
+                $this->email = htmlspecialchars($this->email);
+                $this->regionalCode = htmlspecialchars($this->regionalCode);    
 
                 // Bind parameters
                 $stmt->bindParam(":id", $originalData['id']);
