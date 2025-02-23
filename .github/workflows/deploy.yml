@@ -41,7 +41,7 @@ jobs:
           sed -i "s|\${JWT_SECRET}|${{ secrets.JWT_SECRET }}|g" .env
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: |
@@ -58,7 +58,7 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: .
