@@ -97,61 +97,77 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
+            echo "📦 Extracting deployment files..."
             cd /var/www/jpo-api
             tar -xzf deploy.tar.gz
             rm deploy.tar.gz
 
-            # Fix permissions
+            echo "🔒 Setting up file permissions..."
             sudo chown -R www-data:www-data .
             sudo find . -type f -exec chmod 644 {} \;
             sudo find . -type d -exec chmod 755 {} \;
 
-            # Make storage directories writable if they exist
+            echo "📂 Setting up storage directories..."
             for dir in storage storage/logs storage/cache; do
               if [ -d "$dir" ]; then
                 sudo chmod -R 775 "$dir"
               fi
             done
 
-            # Set proper permissions
-            sudo chown -R www-data:www-data .
-            sudo chmod -R 755 .
-
-            # Check PHP-FPM version and service
+            echo "🐘 Detecting PHP version..."
             PHP_VERSION=$(php -v | head -n1 | cut -d' ' -f2 | cut -d'.' -f1,2)
             PHP_FPM_SERVICE="php${PHP_VERSION}-fpm"
+            echo "Found PHP version: ${PHP_VERSION}"
 
-            # Create basic Nginx config if it doesn't exist
-            if [ ! -f "nginx/jpo-api.conf" ]; then
-              sudo mkdir -p nginx
-              echo "server {
-                listen 80;
-                server_name _;
-                root /var/www/jpo-api/public;
-                index index.php;
-
-                location / {
-                  try_files \$uri \$uri/ /index.php?\$query_string;
-                }
-
-                location ~ \.php$ {
-                  include fastcgi_params;
-                  fastcgi_pass unix:/run/php/php${PHP_VERSION}-fpm.sock;
-                  fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-                }
-              }" | sudo tee nginx/jpo-api.conf
+            echo "🔐 Setting up SSL certificates..."
+            if ! command -v certbot &> /dev/null; then
+              echo "Installing Certbot..."
+              sudo apt-get update
+              sudo apt-get install -y certbot python3-certbot-nginx
             fi
 
-            # Copy Nginx configuration
+            if [ ! -f "/etc/letsencrypt/live/api.jpo.3st3ban.dev/fullchain.pem" ]; then
+              echo "Generating SSL certificate..."
+              sudo certbot certonly --standalone \
+                --non-interactive \
+                --agree-tos \
+                --email erodriguez10@myges.fr \
+                -d api.jpo.3st3ban.dev \
+                --pre-hook "sudo systemctl stop nginx" \
+                --post-hook "sudo systemctl start nginx"
+            else
+              echo "SSL certificate already exists"
+            fi
+
+            echo "⚙️ Configuring Nginx..."
+            sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
             sudo cp nginx/jpo-api.conf /etc/nginx/sites-available/
             sudo ln -sf /etc/nginx/sites-available/jpo-api.conf /etc/nginx/sites-enabled/
+            sudo rm -f /etc/nginx/sites-enabled/default
 
-            # Install PHP-FPM if not present
+            echo "📦 Installing PHP-FPM if needed..."
             if ! dpkg -l | grep -q "^ii.*${PHP_FPM_SERVICE}"; then
               sudo apt-get update
               sudo apt-get install -y ${PHP_FPM_SERVICE}
             fi
 
-            # Restart services
-            sudo systemctl restart ${PHP_FPM_SERVICE} || echo "Failed to restart PHP-FPM"
-            sudo nginx -t && sudo systemctl restart nginx
+            echo "🔄 Restarting services..."
+            if sudo systemctl restart ${PHP_FPM_SERVICE}; then
+              echo "✅ PHP-FPM restarted successfully"
+            else
+              echo "⚠️ Failed to restart PHP-FPM"
+            fi
+
+            if sudo nginx -t; then
+              echo "✅ Nginx configuration test passed"
+              if sudo systemctl restart nginx; then
+                echo "✅ Nginx restarted successfully"
+              else
+                echo "⚠️ Failed to restart Nginx"
+              fi
+            else
+              echo "❌ Nginx configuration test failed"
+              exit 1
+            fi
+
+            echo "✅ Deployment completed successfully!"
