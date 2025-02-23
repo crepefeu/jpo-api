@@ -73,21 +73,25 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
+            # Create temp directory with proper permissions
+            sudo mkdir -p /tmp/deploy
+            sudo chown ubuntu:ubuntu /tmp/deploy
+            
             # Setup application directory
             sudo mkdir -p /var/www/jpo-api
             cd /var/www/jpo-api
 
             # Backup nginx configuration if it exists
             if [ -d "nginx" ]; then
-              sudo mv nginx nginx.bak
+              sudo mv nginx /tmp/nginx.bak
             fi
 
             # Clean up existing files
             sudo rm -rf ./*
 
             # Restore nginx configuration
-            if [ -d "nginx.bak" ]; then
-              sudo mv nginx.bak nginx
+            if [ -d "/tmp/nginx.bak" ]; then
+              sudo mv /tmp/nginx.bak nginx
             fi
 
       - name: Transfer files
@@ -97,7 +101,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_SSH_KEY }}
           source: "deploy.tar.gz"
-          target: "/var/www/jpo-api"
+          target: "/tmp/deploy"
 
       - name: Configure deployment
         uses: appleboy/ssh-action@master
@@ -106,11 +110,18 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            cd /var/www/jpo-api
+            cd /tmp/deploy
             
-            # Extract files with sudo
-            sudo tar -xzf deploy.tar.gz
-            sudo rm deploy.tar.gz
+            # Extract files
+            tar -xzf deploy.tar.gz
+            rm deploy.tar.gz
+
+            # Move files to final destination
+            sudo cp -r . /var/www/jpo-api/
+            cd /var/www/jpo-api
+
+            # Cleanup temp directory
+            sudo rm -rf /tmp/deploy
 
             # Create .env file with sudo
             sudo bash -c 'cat > .env << EOL
