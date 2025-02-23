@@ -45,12 +45,6 @@ class RateLimiter {
 
         $count = count($requests);
 
-        // Debug output
-        error_log(sprintf(
-            "Rate limit check - IP: %s, Count: %d, Max: %d, Window: %d",
-            $key, $count, $this->maxRequests, $this->window
-        ));
-
         // Strictly check if we've hit the limit
         if ($count >= $this->maxRequests) {
             flock($fp, LOCK_UN);

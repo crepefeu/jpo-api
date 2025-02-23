@@ -49,12 +49,6 @@ abstract class ApiController
                 echo json_encode([
                     'error' => true,
                     'message' => 'Rate limit exceeded. Please try again later.',
-                    'debug' => [
-                        'ip' => $clientIp,
-                        'remaining' => $remaining,
-                        'window' => Config::get('RATE_LIMIT_WINDOW'),
-                        'max' => Config::get('RATE_LIMIT_MAX_REQUESTS')
-                    ]
                 ]);
                 exit();
             }
@@ -91,14 +85,6 @@ abstract class ApiController
             'error' => true,
             'message' => $e->getMessage()
         ];
-
-        if (Config::get('DEBUG_MODE')) {
-            $response['debug'] = [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ];
-        }
 
         echo json_encode($response);
     }
